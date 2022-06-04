@@ -15,6 +15,16 @@ var GlobalFlags = []cli.Flag{
 		Aliases: []string{"G"},
 		Usage:   "experiment/vo override",
 	},
+	&cli.BoolFlag{
+		Name:  "token",
+		Usage: "use SciToken for auth",
+		Value: true,
+	},
+	&cli.BoolFlag{
+		Name:  "proxy",
+		Usage: "use X509 proxy for auth",
+		Value: false,
+	},
 }
 
 func CheckCreds(ctx *cli.Context, k *kemba.Kemba) error {
@@ -34,9 +44,19 @@ func CheckCreds(ctx *cli.Context, k *kemba.Kemba) error {
 	}
 	k.Printf("got role: %s", role)
 
-	if err := GetToken(group, role); err != nil {
-		return err
+	if ctx.Bool("token") {
+		k.Log("getting token")
+		if err := GetToken(group, role); err != nil {
+			return err
+		}
 	}
+	if ctx.Bool("proxy") {
+		k.Log("getting proxy")
+		if err := GetProxy(group, role); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
