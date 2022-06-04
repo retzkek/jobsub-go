@@ -14,7 +14,9 @@ import (
 
 const (
 	DEFAULT_VAULT_HOST = "fermicloud543.fnal.gov"
-	DEFAULT_ROLE       = "Analysis"
+	// DEFAULT_ROLE is the default role for htgettoken/vault, which we don't
+	// want to ask for explicitely
+	DEFAULT_ROLE = "Analysis"
 )
 
 // GetExp tries to determine the user's experiment/vo
@@ -65,7 +67,7 @@ func GetToken(exp, role string) error {
 		issuer = "fermilab"
 	}
 
-	tokenfile := fmt.Sprintf("%sbt_token_%s_%s_%s", os.TempDir(), issuer, strings.ToLower(role), u.Uid)
+	tokenfile := fmt.Sprintf("%s/bt_token_%s_%s_%s", os.TempDir(), issuer, strings.ToLower(role), u.Uid)
 	k.Printf("tokenfile: %s", tokenfile)
 	if err := os.Setenv("BEARER_TOKEN_FILE", tokenfile); err != nil {
 		return fmt.Errorf("error setting BEARER_TOKEN_FILE: %w", err)
@@ -81,7 +83,12 @@ func GetToken(exp, role string) error {
 	}
 
 	k.Log("getting new token")
-	cmd := exec.Command("htgettoken", "-a", DEFAULT_VAULT_HOST, "-i", issuer, "-r", role)
+	cmd := exec.Command("htgettoken", "-a", DEFAULT_VAULT_HOST, "-i", issuer)
+	// htgettoken won't actually give you a token with the default role if you
+	// ask for it explicitely. Seems like a bug?
+	if role != DEFAULT_ROLE {
+		cmd.Args = append(cmd.Args, "-r", role)
+	}
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
@@ -104,9 +111,9 @@ func GetProxy(exp, role string) error {
 		issuer = "fermilab"
 	}
 
-	certfile := fmt.Sprintf("%sx509up_u%s", os.TempDir(), u.Uid)
+	certfile := fmt.Sprintf("%s/x509up_u%s", os.TempDir(), u.Uid)
 	k.Printf("certfile: %s", certfile)
-	vomsfile := fmt.Sprintf("%sx509up_%s_%s_%s", os.TempDir(), exp, role, u.Uid)
+	vomsfile := fmt.Sprintf("%s/x509up_%s_%s_%s", os.TempDir(), exp, role, u.Uid)
 	k.Printf("vomsfile: %s", vomsfile)
 
 	cmd := exec.Command("voms-proxy-info", "-exists", "-valid", "0:10", "-file", vomsfile)

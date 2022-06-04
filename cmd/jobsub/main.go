@@ -32,6 +32,7 @@ func main() {
 				Aliases:   []string{"q"},
 				Usage:     "list current job status",
 				ArgsUsage: "[JOBID]",
+				Action:    jobsub.Queue,
 			},
 			{
 				Name:      "release",
