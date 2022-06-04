@@ -26,6 +26,27 @@ func condor_wrapper(command string) func(ctx *cli.Context) error {
 			}
 		}
 
+		// get creds
+		group := ctx.String("group")
+		if group == "" {
+			var err error
+			group, err = getExp()
+			if err != nil {
+				log.Fatalf("error determining experiment: %s", err)
+			}
+		}
+		log.Print(group)
+
+		role, err := getRole()
+		if err != nil {
+			log.Fatalf("error determining role: %s", err)
+		}
+		log.Print(role)
+
+		if err := getToken(group, role); err != nil {
+			log.Fatalf("%s", err)
+		}
+
 		// run the command for each job
 		for _, j := range jobs {
 			jargs := append(args, "-name", j.Schedd)
@@ -56,7 +77,11 @@ func main() {
 				Aliases: []string{"v"},
 				Value:   0,
 				Usage:   "debug level",
-				EnvVars: []string{"IFDH_DEBUG"},
+			},
+			&cli.StringFlag{
+				Name:    "group",
+				Aliases: []string{"G"},
+				Usage:   "experiment/vo override",
 			},
 		},
 		Commands: []*cli.Command{
