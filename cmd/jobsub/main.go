@@ -15,10 +15,11 @@ func main() {
 		Flags: jobsub.GlobalFlags,
 		Commands: []*cli.Command{
 			{
-				Name:      "fetchlog",
-				Aliases:   []string{},
-				Usage:     "fetch job logs (stdout etc)",
-				ArgsUsage: "JOBID",
+				Name:    "fetchlog",
+				Aliases: []string{},
+				Usage:   "fetch job logs (stdout etc)",
+				Flags:   jobsub.FetchlogFlags,
+				Action:  jobsub.Fetchlog,
 			},
 			{
 				Name:      "hold",
