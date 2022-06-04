@@ -27,7 +27,8 @@ var GlobalFlags = []cli.Flag{
 	},
 }
 
-func CheckCreds(ctx *cli.Context, k *kemba.Kemba) error {
+func CheckCreds(ctx *cli.Context) error {
+	k := kemba.New("jobsub:CheckCreds")
 	group := ctx.String("group")
 	if group == "" {
 		var err error
@@ -79,7 +80,7 @@ func CondorWrapper(command string) func(ctx *cli.Context) error {
 		}
 
 		// get creds
-		if err := CheckCreds(ctx, k.Extend("CheckCreds")); err != nil {
+		if err := CheckCreds(ctx); err != nil {
 			return err
 		}
 
@@ -108,7 +109,7 @@ func Queue(ctx *cli.Context) error {
 	k := kemba.New("jobsub:queue")
 
 	// get creds
-	if err := CheckCreds(ctx, k.Extend("CheckCreds")); err != nil {
+	if err := CheckCreds(ctx); err != nil {
 		return err
 	}
 
