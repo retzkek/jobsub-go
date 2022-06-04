@@ -2,20 +2,14 @@ package jobsub
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 
+	"github.com/clok/kemba"
 	"github.com/urfave/cli/v2"
 )
 
 var GlobalFlags = []cli.Flag{
-	&cli.IntFlag{
-		Name:    "debug",
-		Aliases: []string{"v"},
-		Value:   0,
-		Usage:   "debug level",
-	},
 	&cli.StringFlag{
 		Name:    "group",
 		Aliases: []string{"G"},
@@ -23,7 +17,31 @@ var GlobalFlags = []cli.Flag{
 	},
 }
 
+func CheckCreds(ctx *cli.Context, k *kemba.Kemba) error {
+	group := ctx.String("group")
+	if group == "" {
+		var err error
+		group, err = GetExp()
+		if err != nil {
+			return fmt.Errorf("error determining experiment: %w", err)
+		}
+	}
+	k.Printf("got group: %s", group)
+
+	role, err := GetRole()
+	if err != nil {
+		return fmt.Errorf("error determining role: %w", err)
+	}
+	k.Printf("got role: %s", role)
+
+	if err := GetToken(group, role); err != nil {
+		return err
+	}
+	return nil
+}
+
 func CondorWrapper(command string) func(ctx *cli.Context) error {
+	k := kemba.New("jobsub:" + command)
 	return func(ctx *cli.Context) error {
 		if ctx.NArg() < 1 {
 			return fmt.Errorf("must specify at least one job")
@@ -41,24 +59,8 @@ func CondorWrapper(command string) func(ctx *cli.Context) error {
 		}
 
 		// get creds
-		group := ctx.String("group")
-		if group == "" {
-			var err error
-			group, err = GetExp()
-			if err != nil {
-				log.Fatalf("error determining experiment: %s", err)
-			}
-		}
-		log.Print(group)
-
-		role, err := GetRole()
-		if err != nil {
-			log.Fatalf("error determining role: %s", err)
-		}
-		log.Print(role)
-
-		if err := GetToken(group, role); err != nil {
-			log.Fatalf("%s", err)
+		if err := CheckCreds(ctx, k.Extend("CheckCreds")); err != nil {
+			return err
 		}
 
 		// run the command for each job
@@ -70,12 +72,12 @@ func CondorWrapper(command string) func(ctx *cli.Context) error {
 				jargs = append(jargs, j.Seq+"."+j.Proc)
 			}
 			condor_command := "condor_" + command
-			log.Printf("running %s with args %v", condor_command, jargs)
+			k.Printf("running %s with args %v", condor_command, jargs)
 			cmd := exec.Command(condor_command, jargs...)
 			cmd.Stderr = os.Stderr
 			cmd.Stdout = os.Stdout
 			if err := cmd.Run(); err != nil {
-				log.Fatalf("error running condor command: %s", err)
+				return fmt.Errorf("error running condor command: %w", err)
 			}
 		}
 		return nil
