@@ -1,1 +1,3 @@
 /jobsub-go
+/cmd/jobsub/jobsub
+/cmd/jobsub_rm/jobsub_rm

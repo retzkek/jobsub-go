@@ -1,4 +1,4 @@
-package main
+package jobsub
 
 import (
 	"fmt"
@@ -16,8 +16,8 @@ const (
 	DEFAULT_ROLE       = "Analysis"
 )
 
-// getExp tries to determine the user's experiment/vo
-func getExp() (string, error) {
+// GetExp tries to determine the user's experiment/vo
+func GetExp() (string, error) {
 	// check if a recognized env var is set
 	for _, ev := range []string{"GROUP", "EXPERIMENT", "SAM_EXPERIMENT"} {
 		if g, found := os.LookupEnv(ev); found {
@@ -37,8 +37,8 @@ func getExp() (string, error) {
 	return g.Name, nil
 }
 
-// getRole determines the user's role from the environment
-func getRole() (string, error) {
+// GetRole determines the user's role from the environment
+func GetRole() (string, error) {
 	u, err := user.Current()
 	if err != nil {
 		return "", fmt.Errorf("unable to determine current user: %w", err)
@@ -49,9 +49,9 @@ func getRole() (string, error) {
 	return DEFAULT_ROLE, nil
 }
 
-// getToken checks for a valid token, otherwise obtains one and sets
+// GetToken checks for a valid token, otherwise obtains one and sets
 // BEARER_TOKEN_FILE
-func getToken(exp, role string) error {
+func GetToken(exp, role string) error {
 	pid := os.Getpid()
 	tmp := os.TempDir()
 	role = strings.ToLower(role)

@@ -1,4 +1,4 @@
-package main
+package jobsub
 
 import (
 	"fmt"
