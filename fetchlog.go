@@ -91,7 +91,7 @@ func Fetchlog(ctx *cli.Context) error {
 		return fmt.Errorf("error reading sandbox: %w", err)
 	}
 	k.Println(files)
-	switch ctx.String("archive-format") {
+	switch af := ctx.String("archive-format"); af {
 	case "zip":
 		cmd = exec.Command("zip", "-j", j.String()+".zip")
 		// -j: junk (don't record) directory names
@@ -107,6 +107,8 @@ func Fetchlog(ctx *cli.Context) error {
 		for _, f := range files {
 			cmd.Args = append(cmd.Args, f.Name())
 		}
+	default:
+		return fmt.Errorf("unrecognized archive format %s", af)
 	}
 	k.Printf("running %v", cmd.Args)
 	if err := cmd.Run(); err != nil {
