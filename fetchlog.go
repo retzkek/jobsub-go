@@ -67,7 +67,7 @@ func Fetchlog(ctx *cli.Context) error {
 	} else {
 		cmd.Args = append(cmd.Args, j.Seq+"."+j.Proc)
 	}
-	k.Printf("running %s with args %v", cmd.Path, cmd.Args)
+	k.Printf("running %v", cmd.Args)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	if err := cmd.Run(); err != nil {
@@ -84,7 +84,34 @@ func Fetchlog(ctx *cli.Context) error {
 		return nil
 	}
 
-	// TODO build tarball
+	// build tarball
+	// could use archive/tar etc but running a command is simpler for current use case
+	files, err := os.ReadDir(iwd)
+	if err != nil {
+		return fmt.Errorf("error reading sandbox: %w", err)
+	}
+	k.Println(files)
+	switch ctx.String("archive-format") {
+	case "zip":
+		cmd = exec.Command("zip", "-j", j.String()+".zip")
+		// -j: junk (don't record) directory names
+		for _, f := range files {
+			cmd.Args = append(cmd.Args, iwd+"/"+f.Name())
+		}
+	case "tar":
+		cmd = exec.Command("tar", "-C", iwd, "-czf", j.String()+".tgz")
+		// -C: move into directory so paths are relative
+		// -c: create
+		// -z: gzip
+		// -f: filename
+		for _, f := range files {
+			cmd.Args = append(cmd.Args, f.Name())
+		}
+	}
+	k.Printf("running %v", cmd.Args)
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("error writing archive: %w", err)
+	}
 
 	return nil
 }
