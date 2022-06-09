@@ -67,7 +67,7 @@ func GetToken(exp, role string) error {
 		issuer = "fermilab"
 	}
 
-	tokenfile := fmt.Sprintf("%s/bt_token_%s_%s_%s", os.TempDir(), issuer, strings.ToLower(role), u.Uid)
+	tokenfile := fmt.Sprintf("%s/bt_token_%s_%s_%s", os.TempDir(), issuer, role, u.Uid)
 	k.Printf("tokenfile: %s", tokenfile)
 	if err := os.Setenv("BEARER_TOKEN_FILE", tokenfile); err != nil {
 		return fmt.Errorf("error setting BEARER_TOKEN_FILE: %w", err)
@@ -87,7 +87,7 @@ func GetToken(exp, role string) error {
 	// htgettoken won't actually give you a token with the default role if you
 	// ask for it explicitely. Seems like a bug?
 	if role != DEFAULT_ROLE {
-		cmd.Args = append(cmd.Args, "-r", role)
+		cmd.Args = append(cmd.Args, "-r", strings.ToLower(role))
 	}
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
