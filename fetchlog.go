@@ -3,9 +3,9 @@ package jobsub
 import (
 	"fmt"
 	"os"
+	"os/exec"
 
 	"github.com/clok/kemba"
-	"github.com/retzkek/htcondor-go"
 	"github.com/urfave/cli/v2"
 )
 
@@ -47,22 +47,41 @@ func Fetchlog(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("error determining log location: %w", err)
 	}
-	k.Printf("will look for output in %s", iwd)
+	k.Printf("sandbox directory: %s", iwd)
 
-	// run condor_transfer_data to get output from schedd
-	ccmd := htcondor.NewCommand("condor_transfer_data").WithName(j.Schedd)
-	if j.Cluster {
-		ccmd = ccmd.WithArg(j.Seq)
-	} else {
-		ccmd = ccmd.WithArg(j.Seq + "." + j.Proc)
+	// make sure output directory exists
+	if _, err := os.Stat(iwd); os.IsNotExist(err) {
+		k.Println("sandbox directory doesn't exists, try to make it")
+		if err := os.Mkdir(iwd, 0750); err != nil {
+			return fmt.Errorf("sandbox directory %s doesn't exist and can't be created: %w", iwd, err)
+		}
+	} else if err != nil {
+		k.Printf("Stat(iwd) got error, will try anyways: %s", err.Error())
 	}
 
-	k.Printf("running %s with args %v", ccmd.Command, ccmd.MakeArgs())
-	cmd := ccmd.Cmd()
+	// run condor_transfer_data to get output from schedd
+	cmd := exec.Command("condor_transfer_data")
+	cmd.Args = append(cmd.Args, "-name", j.Schedd)
+	if j.Cluster {
+		cmd.Args = append(cmd.Args, j.Seq)
+	} else {
+		cmd.Args = append(cmd.Args, j.Seq+"."+j.Proc)
+	}
+	k.Printf("running %s with args %v", cmd.Path, cmd.Args)
 	cmd.Stderr = os.Stderr
 	cmd.Stdout = os.Stdout
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("error running condor command: %w", err)
+		return fmt.Errorf("error fetching output: %w", err)
+	}
+
+	// if user wants output in a specific directory, just rename it
+	if destdir := ctx.String("destdir"); destdir != "" {
+		k.Printf("moving sandbox directory to %s", destdir)
+		err := os.Rename(iwd, destdir)
+		if err != nil {
+			return fmt.Errorf("error moving sandbox directory: %w", err)
+		}
+		return nil
 	}
 
 	// TODO build tarball
