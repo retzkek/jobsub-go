@@ -3,6 +3,9 @@ package jobsub
 import (
 	"fmt"
 	"regexp"
+
+	"github.com/clok/kemba"
+	"github.com/retzkek/htcondor-go"
 )
 
 var jobIDRegexp *regexp.Regexp
@@ -54,4 +57,25 @@ func (j *Job) String() string {
 		return j.ID
 	}
 	return j.ComposeID()
+}
+
+// GetAttribute uses condor_q to get the specified attribute for the job. It is
+// an error if the attribute is not found.
+func (j *Job) GetAttribute(attr string) (string, error) {
+	k := kemba.New("jobsub:Job:GetAttribute")
+	ccmd := htcondor.NewCommand("condor_q").WithName(j.Schedd).WithArg(j.Seq).WithAttribute(attr)
+	k.Printf("running %s with args %v", ccmd.Command, ccmd.MakeArgs())
+	ads, err := ccmd.Run()
+	if err != nil {
+		return "", err
+	}
+	if len(ads) < 1 {
+		return "", fmt.Errorf("job %s not found on schedd %s", j.Seq, j.Schedd)
+	}
+	k.Println(ads)
+	val, found := ads[0][attr]
+	if !found {
+		return "", fmt.Errorf("attribute %s not found for job", attr)
+	}
+	return val.String(), nil
 }
